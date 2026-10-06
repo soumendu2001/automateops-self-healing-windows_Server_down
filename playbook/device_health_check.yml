@@ -10,12 +10,3 @@
         host: "{{ target_ip }}"
         port: 5985
         timeout: 20
-      register: connectivity
-      
-
-    - name: Launch AWS Recovery
-      command: >
-        ansible-playbook playbook/aws_windows_recovery.yml
-        -e target_host={{ target_host }}
-        -e target_ip={{ target_ip }}
-      when: connectivity.failed
