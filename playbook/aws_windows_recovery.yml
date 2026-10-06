@@ -124,7 +124,7 @@
         wait: true
       when:
         - reboot_validation is defined
-        - reboot_validation is failed
+        - reboot_validation is failed | default(false)
 
     - name: Start EC2 instance after stop
       amazon.aws.ec2_instance:
@@ -137,7 +137,7 @@
       ignore_errors: true
       when:
         - reboot_validation is defined
-        - reboot_validation is failed
+        - reboot_validation is failed | default(false)
 
     - name: Wait for WinRM after stop/start
       wait_for:
