@@ -9,7 +9,7 @@
   vars:
     private_ip: "{{ target_ip }}"
     winrm_port: 5985
-    aws_region: us-eas-1
+    aws_region: us-east-1
 
   tasks:
 
