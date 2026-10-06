@@ -7,133 +7,58 @@
     - amazon.aws
 
   vars:
-    private_ip: "{{ target_ip }}"
-    winrm_port: 5985
     aws_region: us-east-1
+    winrm_port: 5985
 
   tasks:
 
-    - name: Get EC2 details by tag
+    #################################################################
+    # Discover EC2 Instance
+    #################################################################
+
+    - name: Get EC2 details by Name tag
       amazon.aws.ec2_instance_info:
         region: "{{ aws_region }}"
         filters:
           "tag:Name": "{{ target_host }}"
       register: ec2_lookup
 
-    - name: Set instance id automatically
+    - name: Validate EC2 lookup result
+      fail:
+        msg: "No EC2 instance found with Name tag {{ target_host }}"
+      when: ec2_lookup.instances | length == 0
+
+    - name: Set instance facts
       set_fact:
         instance_id: "{{ ec2_lookup.instances[0].instance_id }}"
         private_ip: "{{ ec2_lookup.instances[0].private_ip_address }}"
-    - name: Validation EC2 lookup result
-      fail:
-        msg: "No EC2 instances found with name tag {{ target_host }}"
-      when: ec2_lookup.instances | length == 0
-      
 
-    - name: Get current EC2 state
+    #################################################################
+    # Retrieve Current State
+    #################################################################
+
+    - name: Get EC2 current state
       amazon.aws.ec2_instance_info:
         region: "{{ aws_region }}"
         instance_ids:
           - "{{ instance_id }}"
       register: ec2_state
 
-    - name: Set Current state of EC2 instance
+    - name: Set current state
       set_fact:
-        current_state: "{{ ec2_state.instances[0].state.name}}"
+        current_state: "{{ ec2_state.instances[0].state.name }}"
 
-    - name: Display instance state
+    - name: Display current state
       debug:
-        msg: "Instance State: {{ current_state }}"
+        msg:
+          - "Instance ID : {{ instance_id }}"
+          - "Private IP  : {{ private_ip }}"
+          - "State       : {{ current_state }}"
 
-    # ################################################################
-    # Reboot First
-    # ################################################################
+    #################################################################
+    # Scenario 1 : Instance Running -> Reboot
+    #################################################################
 
     - name: Reboot EC2 instance
       amazon.aws.ec2_instance:
-        region: "{{ aws_region }}"
-        instance_ids:
-          - "{{ instance_id }}"
-        state: rebooted
-        wait: true
-      when: current_state == "running"
-
-    - name: Wait for WinRM after reboot
-      wait_for:
-        host: "{{ private_ip }}"
-        port: "{{ winrm_port }}"
-        timeout: 300
-      register: reboot_result
-      ignore_errors: true
-      when: current_state == "running"
-
-    # ###############################################################
-    # Start Stopped instance
-    # ###############################################################
-    - name: Start EC2 instances if stopped
-      amazon.aws.ec2_instance:
-        region: "{{ aws_region }}"
-        instance_ids:
-          - "{{ instance_id }}"
-        state: started
-        wait: true
-      when: current_state == "stopped"
-
-    # ################################################################
-    # Stop/Start if reboot failed
-    # ################################################################
-
-    - name: Stop EC2 instance
-      amazon.aws.ec2_instance:
-        region: "{{ aws_region }}"
-        instance_ids:
-          - "{{ instance_id }}"
-        state: stopped
-        wait: true
-      when: 
-       - reboot_result is defined
-       - reboot_result.failed
-
-    - name: Start EC2 instance
-      amazon.aws.ec2_instance:
-        region: "{{ aws_region }}"
-        instance_ids:
-          - "{{ instance_id }}"
-        state: started
-        wait: true
-      when: reboot_result.failed
-
-    - name: Wait for WinRM after start
-      wait_for:
-        host: "{{ private_ip }}"
-        port: "{{ winrm_port }}"
-        timeout: 600
-      register: final_validation
-      when: reboot_result.failed
-
-    - name: Recovery Result
-      debug:
-        msg: |
-          AWS Recovery Completed
-
-          Instance : {{ instance_id }}
-          Server   : {{ private_ip }}
-          WinRM    : Reachable
-
-    - name: Build Summary
-      set_fact:
-        recovery_summary:
-          host: "{{ private_ip }}"
-          instance_id: "{{ instance_id }}"
-          recovery_action: >-
-            {% if current_state == "stopped" %}
-            EC2 Start
-            {% elif reboot_result is defined and reboot_result.failed %}
-            EC2 Stop Start
-            {% else %}
-            EC2 Reboot
-            {% endif %}
-
-    - name: Display Summary
-      debug:
-        var: recovery_summary
+        region: "{{ aws_
