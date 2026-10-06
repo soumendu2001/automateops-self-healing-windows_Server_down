@@ -15,7 +15,7 @@
 
     - name: Launch AWS Recovery
       command: >
-        ansible-playbook aws_windows_recovery.yml
-        -e target_instance_id= {{target_instance_id}}
+        ansible-playbook playbook/aws_windows_recovery.yml
+        -e target_host={{ target_host }}
         -e target_ip={{ target_ip }}
       when: connectivity.failed
