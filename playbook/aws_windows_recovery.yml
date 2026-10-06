@@ -98,7 +98,7 @@
         recovery_status: "AWS Capacity Issue"
       when:
         - start_result is defined
-        - start_result.failed
+        - start_result.failed | default(false)
 
     - name: Wait for WinRM after instance start
       wait_for:
@@ -124,7 +124,7 @@
         wait: true
       when:
         - reboot_validation is defined
-        - reboot_validation.failed
+        - reboot_validation.failed | default(false)
 
     - name: Start EC2 instance after stop
       amazon.aws.ec2_instance:
@@ -137,7 +137,7 @@
       ignore_errors: true
       when:
         - reboot_validation is defined
-        - reboot_validation.failed
+        - reboot_validation.failed | default(false)
 
     - name: Wait for WinRM after stop/start
       wait_for:
@@ -169,7 +169,7 @@
         recovery_action: "EC2 Stop/Start"
       when:
         - reboot_validation is defined
-        - reboot_validation.failed
+        - reboot_validation.failed | default(false)
 
     #################################################################
     # Calculate Final Status
