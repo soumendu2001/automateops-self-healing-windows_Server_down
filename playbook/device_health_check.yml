@@ -8,5 +8,5 @@
     - name: Check WinRM
       wait_for:
         host: "{{ target_ip }}"
-        port: 5985
+        port: "{{ winrm_port | default(5985)}}"
         timeout: 20
