@@ -124,7 +124,7 @@
         wait: true
       when:
         - reboot_validation is defined
-        - reboot_validation.failed | default(false)
+        - reboot_validation is failed
 
     - name: Start EC2 instance after stop
       amazon.aws.ec2_instance:
@@ -137,7 +137,7 @@
       ignore_errors: true
       when:
         - reboot_validation is defined
-        - reboot_validation.failed | default(false)
+        - reboot_validation is failed
 
     - name: Wait for WinRM after stop/start
       wait_for:
@@ -169,7 +169,7 @@
         recovery_action: "EC2 Stop/Start"
       when:
         - reboot_validation is defined
-        - reboot_validation.failed | default(false)
+        - reboot_validation is failed
 
     #################################################################
     # Calculate Final Status
@@ -189,7 +189,7 @@
         final_status: "WinRM Reachable"
       when:
         - reboot_validation is defined
-        - not reboot_validation.failed
+        - not reboot_validation is failed
 
     - name: Set successful start status
       set_fact:
