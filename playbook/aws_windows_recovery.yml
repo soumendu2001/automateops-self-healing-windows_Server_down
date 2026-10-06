@@ -61,4 +61,188 @@
 
     - name: Reboot EC2 instance
       amazon.aws.ec2_instance:
-        region: "{{ aws_
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: rebooted
+        wait: true
+      register: reboot_action
+      when: current_state == "running"
+
+    - name: Wait for WinRM after reboot
+      wait_for:
+        host: "{{ private_ip }}"
+        port: "{{ winrm_port }}"
+        timeout: 300
+      register: reboot_validation
+      ignore_errors: true
+      when: current_state == "running"
+
+    #################################################################
+    # Scenario 2 : Instance Stopped -> Start
+    #################################################################
+
+    - name: Start stopped EC2 instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: started
+        wait: true
+      register: start_result
+      ignore_errors: true
+      when: current_state == "stopped"
+
+    - name: Detect AWS capacity issue
+      set_fact:
+        recovery_status: "AWS Capacity Issue"
+      when:
+        - start_result is defined
+        - start_result.failed
+
+    - name: Wait for WinRM after instance start
+      wait_for:
+        host: "{{ private_ip }}"
+        port: "{{ winrm_port }}"
+        timeout: 600
+      register: start_validation
+      ignore_errors: true
+      when:
+        - current_state == "stopped"
+        - start_result is succeeded
+
+    #################################################################
+    # Scenario 3 : Reboot Failed -> Stop/Start Recovery
+    #################################################################
+
+    - name: Stop EC2 instance
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: stopped
+        wait: true
+      when:
+        - reboot_validation is defined
+        - reboot_validation.failed
+
+    - name: Start EC2 instance after stop
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        instance_ids:
+          - "{{ instance_id }}"
+        state: started
+        wait: true
+      register: restart_result
+      ignore_errors: true
+      when:
+        - reboot_validation is defined
+        - reboot_validation.failed
+
+    - name: Wait for WinRM after stop/start
+      wait_for:
+        host: "{{ private_ip }}"
+        port: "{{ winrm_port }}"
+        timeout: 600
+      register: final_validation
+      ignore_errors: true
+      when:
+        - restart_result is defined
+        - restart_result is succeeded
+
+    #################################################################
+    # Determine Recovery Action
+    #################################################################
+
+    - name: Set default recovery action
+      set_fact:
+        recovery_action: "EC2 Reboot"
+      when: current_state == "running"
+
+    - name: Set recovery action for stopped instance
+      set_fact:
+        recovery_action: "EC2 Start"
+      when: current_state == "stopped"
+
+    - name: Override recovery action for stop/start recovery
+      set_fact:
+        recovery_action: "EC2 Stop/Start"
+      when:
+        - reboot_validation is defined
+        - reboot_validation.failed
+
+    #################################################################
+    # Calculate Final Status
+    #################################################################
+
+    - name: Initialize final status
+      set_fact:
+        final_status: "Unknown"
+
+    - name: Set capacity failure status
+      set_fact:
+        final_status: "AWS Capacity Issue"
+      when: recovery_status is defined
+
+    - name: Set successful reboot status
+      set_fact:
+        final_status: "WinRM Reachable"
+      when:
+        - reboot_validation is defined
+        - not reboot_validation.failed
+
+    - name: Set successful start status
+      set_fact:
+        final_status: "WinRM Reachable"
+      when:
+        - start_validation is defined
+        - not start_validation.failed
+
+    - name: Set successful stop/start status
+      set_fact:
+        final_status: "WinRM Reachable"
+      when:
+        - final_validation is defined
+        - not final_validation.failed
+
+    - name: Set failed recovery status
+      set_fact:
+        final_status: "Recovery Failed"
+      when:
+        - final_status == "Unknown"
+
+    #################################################################
+    # Build Final Summary
+    #################################################################
+
+    - name: Build recovery summary
+      set_fact:
+        recovery_summary:
+          instance_id: "{{ instance_id }}"
+          server_name: "{{ target_host }}"
+          private_ip: "{{ private_ip }}"
+          public_ip: "{{ ec2_state.instances[0].public_ip_address | default('N/A') }}"
+          aws_region: "{{ aws_region }}"
+          initial_state: "{{ current_state }}"
+          recovery_action: "{{ recovery_action }}"
+          recovery_status: "{{ final_status }}"
+
+    - name: Display recovery summary
+      debug:
+        msg: |
+          ====================================================
+          AWS SELF-HEALING SUMMARY
+          ====================================================
+          Server Name     : {{ recovery_summary.server_name }}
+          Instance ID     : {{ recovery_summary.instance_id }}
+          Private IP      : {{ recovery_summary.private_ip }}
+          Public IP       : {{ recovery_summary.public_ip }}
+          AWS Region      : {{ recovery_summary.aws_region }}
+          Initial State   : {{ recovery_summary.initial_state }}
+          Recovery Action : {{ recovery_summary.recovery_action }}
+          Final Status    : {{ recovery_summary.recovery_status }}
+          ====================================================
+
+    - name: Display summary object
+      debug:
+        var: recovery_summary
