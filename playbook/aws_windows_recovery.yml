@@ -56,7 +56,7 @@
         timeout: 300
       register: reboot_result
       ignore_errors: true
-      when current_state == "running"
+      when: current_state == "running"
 
     # ###############################################################
     # Start Stopped instance
