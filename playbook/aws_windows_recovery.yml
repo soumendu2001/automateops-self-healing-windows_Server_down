@@ -8,12 +8,14 @@
 
   vars:
     private_ip: "{{ target_ip }}"
-    winrm_port: 5986
+    winrm_port: 5985
+    aws_region: us-eas-1
 
   tasks:
 
     - name: Get EC2 details by tag
       amazon.aws.ec2_instance_info:
+        region: "{{ aws_region }}"
         filters:
           "tag:Name": "{{ target_host }}"
       register: ec2_lookup
@@ -25,6 +27,7 @@
 
     - name: Get current EC2 state
       amazon.aws.ec2_instance_info:
+        region: "{{ aws_region }}"
         instance_ids:
           - "{{ instance_id }}"
       register: ec2_state
@@ -43,6 +46,7 @@
 
     - name: Reboot EC2 instance
       amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
         instance_ids:
           - "{{ instance_id }}"
         state: rebooted
@@ -63,6 +67,7 @@
     # ###############################################################
     - name: Start EC2 instances if stopped
       amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
         instance_ids:
           - "{{ instance_id }}"
         state: started
@@ -75,6 +80,7 @@
 
     - name: Stop EC2 instance
       amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
         instance_ids:
           - "{{ instance_id }}"
         state: stopped
@@ -85,6 +91,7 @@
 
     - name: Start EC2 instance
       amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
         instance_ids:
           - "{{ instance_id }}"
         state: started
