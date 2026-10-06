@@ -8,10 +8,10 @@
     - name: Check WinRM
       wait_for:
         host: "{{ target_ip }}"
-        port: 5986
+        port: 5985
         timeout: 20
       register: connectivity
-      ignore_errors: true
+      
 
     - name: Launch AWS Recovery
       command: >
