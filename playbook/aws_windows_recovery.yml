@@ -221,6 +221,9 @@
       register: memory_usage
 
     - name: Get CPU Usage
+      ansible.windows.win_shell: |
+         [math]:: Round(Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue,2)
+      register: cpu_usage
 
     #################################################################
     # Build Final Summary
@@ -252,6 +255,8 @@
           Initial State   : {{ recovery_summary.initial_state }}
           Recovery Action : {{ recovery_summary.recovery_action }}
           Final Status    : {{ recovery_summary.recovery_status }}
+          CPU Utilization : "{{ cpu_usage.stdout | trim }}%"
+          Memory Utilization: "{{ memory_usage.stdout | trim }}"
           ====================================================
 
     - name: Display summary object
