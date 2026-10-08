@@ -10,12 +10,12 @@
         $total = $os.TotalVisibleMemorySize
         $free  = $os.FreePhysicalMemory
         $used = $total - $free
-        :Round(($used/$total) * 100,2)
+        [math]::Round(($used/$total) * 100,2)
       register: memory_usage
 
     - name: Get CPU Usage
       ansible.windows.win_shell: |
-        :Round(
+        [math]::Round(
           (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue,
           2
         )
