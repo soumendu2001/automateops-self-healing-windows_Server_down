@@ -1,5 +1,5 @@
 - name: Collect Health Metrics
-  hosts: recovered_windows
+  hosts: windows
   gather_facts: false
 
   tasks:
