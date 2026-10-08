@@ -1,8 +1,13 @@
+---
 - name: Collect Health Metrics
   hosts: windows
   gather_facts: false
 
   tasks:
+
+    #################################################################
+    # Memory Usage
+    #################################################################
 
     - name: Get Memory Usage
       ansible.windows.win_shell: |
@@ -14,16 +19,62 @@
 
         $memPct = ($used / $total) * 100
 
-        Write-Output ([math]::Round($memmPct,2))
+        Write-Output ([math]::Round($memPctt,2))
       register: memory_usage
+
+    #################################################################
+    # CPU Usage
+    #################################################################
 
     - name: Get CPU Usage
       ansible.windows.win_shell: |
         $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples[0].CookedValue
-        Write-Output ([math]::Round($cpu,2))
+        Write-Output ([math\]::Round($cpu,2))
       register: cpu_usage
 
-    - debug:
+    #################################################################
+    # Disk Utilization (C:)
+    #################################################################
+
+    - name: Get Disk Utilization
+      ansible.windows.win_shell: |
+        $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+
+        $size = [double]$disk.Size
+        $free = [double]$disk.FreeSpace
+
+        $usedPct = (($size - $free) / $size) * 100
+
+        Write-Output ([math]::Roundd($usedPct,2))
+      register: disk_usage
+
+    #################################################################
+    # Uptime
+    #################################################################
+
+    - name: Get Server Uptime
+      ansible.windows.win_shell: |
+        $os = Get-CimInstance Win32_OperatingSystem
+
+        $bootTime = $os.LastBootUpTime
+
+        $uptimeHours = (
+          New-TimeSpan `
+          -Start $bootTime `
+          -End (Get-Date)
+        ).TotalHours
+
+        Write-Output ([math\]::Round($uptimeHours,2))
+      register: uptime
+
+    #################################################################
+    # Final Output
+    #################################################################
+
+    - name: Display Health Metrics
+      debug:
         msg:
-          - "CPU: {{ cpu_usage.stdout | trim }}%"
-          - "Memory: {{ memory_usage.stdout | trim }}%"
+          - "CPU Usage     : {{ cpu_usage.stdout | trim }}%"
+          - "Memory Usage  : {{ memory_usage.stdout | trim }}%"
+          - "Disk Usage    : {{ disk_usage.stdout | trim }}%"
+          - "Uptime Hours  : {{ uptime.stdout | trim }}"
