@@ -20,7 +20,7 @@
     - name: Get CPU Usage
       ansible.windows.win_shell: |
         $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples[0].CookedValue
-        Write-Output ([math\]::Round($cpu,2))
+        Write-Output ([math]::Round($cpu,2))
       register: cpu_usage
 
     - debug:
