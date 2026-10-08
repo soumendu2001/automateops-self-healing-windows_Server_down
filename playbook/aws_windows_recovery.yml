@@ -211,6 +211,17 @@
       when:
         - final_status == "Unknown"
 
+    - name: Get Memory Usage
+      ansible.windows.win-shell: |
+        $os = Get-CimInstance Win32_OperatingSystem
+        $total = $os.TotalVisibleMemorySize
+        $free  = $os.FreePhysicalMemory
+        $used = $total - $free
+        [math]::Round(($used/$total) * 100,2)
+      register: memory_usage
+
+    - name: Get CPU Usage
+
     #################################################################
     # Build Final Summary
     #################################################################
