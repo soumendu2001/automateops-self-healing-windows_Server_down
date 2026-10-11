@@ -9,4 +9,4 @@
       wait_for:
         host: "{{ hostvars[target_host].ansible_host}}"
         port: "{{ winrm_port | default(5985)}}"
-        timeout: 300
+        timeout: 30
